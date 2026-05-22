@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { View, type StyleProp, type TextStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,41 +10,67 @@ type AnimatedTranscriptTextProps = {
   textStyle?: StyleProp<TextStyle>;
 };
 
-export function AnimatedTranscriptText({
+const STREAM_TICK_MS = 48;
+const MAX_STREAM_FRAMES = 36;
+
+function createRevealFrames(text: string) {
+  if (!text) {
+    return [];
+  }
+
+  const characters = Array.from(text);
+  const charactersPerFrame = Math.max(1, Math.ceil(characters.length / MAX_STREAM_FRAMES));
+  const frames: string[] = [];
+
+  for (
+    let characterCount = charactersPerFrame;
+    characterCount < characters.length;
+    characterCount += charactersPerFrame
+  ) {
+    frames.push(characters.slice(0, characterCount).join(''));
+  }
+
+  frames.push(text);
+
+  return frames;
+}
+
+function AnimatedTranscriptTextComponent({
   text,
   startDelay = 0,
   textStyle,
 }: AnimatedTranscriptTextProps) {
   const [visibleText, setVisibleText] = useState('');
+  const revealFrames = useMemo(() => createRevealFrames(text), [text]);
 
   useEffect(() => {
     setVisibleText('');
 
-    if (!text) {
+    if (!revealFrames.length) {
       return;
     }
 
-    let interval: ReturnType<typeof setInterval> | undefined;
-    let characterIndex = 0;
-    const timeout = setTimeout(() => {
-      interval = setInterval(() => {
-        characterIndex += 1;
-        setVisibleText(text.slice(0, characterIndex));
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let frameIndex = 0;
+    const revealNextFrame = () => {
+      setVisibleText(revealFrames[frameIndex]);
+      frameIndex += 1;
 
-        if (characterIndex >= text.length && interval) {
-          clearInterval(interval);
-        }
-      }, 18);
+      if (frameIndex < revealFrames.length) {
+        timeout = setTimeout(revealNextFrame, STREAM_TICK_MS);
+      }
+    };
+
+    timeout = setTimeout(() => {
+      revealNextFrame();
     }, startDelay);
 
     return () => {
-      clearTimeout(timeout);
-
-      if (interval) {
-        clearInterval(interval);
+      if (timeout) {
+        clearTimeout(timeout);
       }
     };
-  }, [startDelay, text]);
+  }, [revealFrames, startDelay]);
 
   return (
     <View style={styles.animatedTranscriptText}>
@@ -57,3 +83,5 @@ export function AnimatedTranscriptText({
     </View>
   );
 }
+
+export const AnimatedTranscriptText = memo(AnimatedTranscriptTextComponent);

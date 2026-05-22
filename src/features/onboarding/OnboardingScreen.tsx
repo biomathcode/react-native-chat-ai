@@ -1,21 +1,19 @@
-import { FlatList, ListRenderItemInfo, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View, type ListRenderItemInfo } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { ONBOARDING_SAMPLE_TEXT, sarvamVoiceOptions } from '@/constants/sarvam-voices';
 import { VoiceOrb } from '@/features/onboarding/components/VoiceOrb';
 import { VoiceVisualizer } from '@/features/onboarding/components/VoiceVisualizer';
 import { LOOPED_VOICES } from '@/features/onboarding/constants';
+import type { VoiceOption } from '@/features/onboarding/constants';
 import { styles } from '@/features/onboarding/styles';
 import { useVoiceOnboardingController } from '@/features/onboarding/useVoiceOnboardingController';
 
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
-
 export function OnboardingScreen() {
   const onboarding = useVoiceOnboardingController();
-  const renderItem = ({ item, index }: ListRenderItemInfo<(typeof LOOPED_VOICES)[number]>) => (
+  const renderItem = ({ item, index }: ListRenderItemInfo<VoiceOption>) => (
     <VoiceOrb
       audioLevel={onboarding.averageLevel}
       index={index}
@@ -33,7 +31,7 @@ export function OnboardingScreen() {
   );
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.header, { top: onboarding.headerTop }]}>
           <ThemedText style={styles.eyebrow}></ThemedText>
@@ -84,7 +82,7 @@ export function OnboardingScreen() {
           <ThemedText style={styles.voiceTone}>{onboarding.selectedVoice.tone}</ThemedText>
         </Animated.View>
 
-        <AnimatedFlatList
+        <Animated.FlatList<VoiceOption>
           ref={onboarding.listRef}
           data={LOOPED_VOICES}
           horizontal
@@ -117,12 +115,21 @@ export function OnboardingScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => onboarding.completeOnboarding(onboarding.selectedVoice.id)}
-          style={({ pressed }) => [styles.continueButton, { opacity: pressed ? 0.78 : 1 }]}
+          disabled={onboarding.isCompletingOnboarding}
+          onPress={onboarding.completeOnboarding}
+          style={({ pressed }) => [
+            styles.continueButton,
+            { opacity: pressed || onboarding.isCompletingOnboarding ? 0.78 : 1 },
+          ]}
         >
-          <ThemedText style={styles.continueText}>Continue</ThemedText>
+          {onboarding.isCompletingOnboarding ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : null}
+          <ThemedText style={styles.continueText}>
+            {onboarding.isCompletingOnboarding ? 'Loading' : 'Continue'}
+          </ThemedText>
         </Pressable>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }

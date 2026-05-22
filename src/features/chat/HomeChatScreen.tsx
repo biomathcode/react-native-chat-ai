@@ -1,40 +1,77 @@
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MeshListeningButton } from '@/components/mesh-listening-button';
-import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
-import { ChatThread } from '@/features/chat/components/ChatThread';
 import { ChatSessionsButton } from '@/features/chat/components/ChatSessionsButton';
 import { ChatSessionsScreen } from '@/features/chat/components/ChatSessionsScreen';
-import { ProfileButton } from '@/features/chat/components/ProfileButton';
+import { ChatThread } from '@/features/chat/components/ChatThread';
 import { styles } from '@/features/chat/styles';
 import { useChatController } from '@/features/chat/useChatController';
+import { MedicineSchedulesScreen } from '@/features/medicine-schedules/MedicineSchedulesScreen';
+
+function getFirstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export function HomeChatScreen() {
-  const chat = useChatController();
+  const { medicineSchedules, medicineSchedulesRequest } = useLocalSearchParams<{
+    medicineSchedules?: string | string[];
+    medicineSchedulesRequest?: string | string[];
+  }>();
+  const medicineSchedulesParam = getFirstParam(medicineSchedules);
+  const medicineSchedulesRequestParam = getFirstParam(medicineSchedulesRequest) ?? medicineSchedulesParam ?? null;
+  const chat = useChatController({ initialMedicineSchedulesOpen: medicineSchedulesParam === 'open' });
   const insets = useSafeAreaInsets();
+  const lastMedicineSchedulesRequest = useRef<string | null>(
+    medicineSchedulesParam === 'open' ? medicineSchedulesRequestParam : null
+  );
   const topControlOffset = insets.top + chat.profileTopOffset;
 
+  useEffect(() => {
+    if (medicineSchedulesParam !== 'open') {
+      lastMedicineSchedulesRequest.current = null;
+      return;
+    }
+
+    if (lastMedicineSchedulesRequest.current === medicineSchedulesRequestParam) {
+      return;
+    }
+
+    lastMedicineSchedulesRequest.current = medicineSchedulesRequestParam;
+    chat.openMedicineSchedulesImmediately();
+  }, [chat, medicineSchedulesParam, medicineSchedulesRequestParam]);
+
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <ChatSessionsButton
+        iconProgress={chat.medicineSchedulesProgress}
+        isCloseButton={chat.isMedicineSchedulesOpen}
         isOpen={chat.isSessionsOpen}
-        onPress={chat.toggleSessions}
+        onPress={chat.isMedicineSchedulesOpen ? chat.closeMedicineSchedules : chat.toggleSessions}
         progress={chat.sessionsProgress}
         screenWidth={chat.width}
         topOffset={topControlOffset}
       />
       <GestureDetector gesture={chat.drawerGesture}>
-        <Animated.View style={[styles.drawerTrack, { width: chat.width * 2 }, chat.drawerTrackStyle]}>
+        <Animated.View style={[styles.drawerTrack, { width: chat.width * 3 }, chat.drawerTrackStyle]}>
           <View style={[styles.drawerPane, { width: chat.width }]}>
-            <ChatSessionsScreen onClose={chat.closeSessions} sessions={chat.sessions} />
+            <ChatSessionsScreen
+              activeSessionId={chat.activeSessionId}
+              onCreateSession={chat.createNewSession}
+              onSelectSession={chat.selectSession}
+              sessions={chat.sessions}
+            />
           </View>
           <View style={[styles.drawerPane, { width: chat.width }]}>
             <SafeAreaView style={styles.safeArea}>
-              <ProfileButton topOffset={topControlOffset} />
+              {/* <ProfileButton topOffset={topControlOffset} /> */}
+
+
               <ChatThread
                 bubbleMaxWidth={chat.bubbleMaxWidth}
                 bubblePaddingHorizontal={chat.bubblePaddingHorizontal}
@@ -68,8 +105,11 @@ export function HomeChatScreen() {
               {Platform.OS === 'web' && <WebBadge />}
             </SafeAreaView>
           </View>
+          <View style={[styles.drawerPane, { width: chat.width }]}>
+            <MedicineSchedulesScreen />
+          </View>
         </Animated.View>
       </GestureDetector>
-    </ThemedView>
+    </View>
   );
 }

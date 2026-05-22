@@ -30,6 +30,14 @@ export function AssistantSpeechControl({
   const [hasFailed, setHasFailed] = useState(false);
   const generatedRequestRef = useRef<string | null>(null);
   const isGeneratingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    []
+  );
 
   const playLocalAudio = useCallback(() => {
     if (!localAudioSource) return;
@@ -37,11 +45,23 @@ export function AssistantSpeechControl({
     setHasFailed(false);
     setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
       .then(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+
         player.replace(localAudioSource);
         return player.seekTo(0);
       })
-      .then(() => player.play())
-      .catch(() => setHasFailed(true));
+      .then(() => {
+        if (isMountedRef.current) {
+          player.play();
+        }
+      })
+      .catch(() => {
+        if (isMountedRef.current) {
+          setHasFailed(true);
+        }
+      });
   }, [localAudioSource, player]);
 
   const generateAndPlay = useCallback(() => {
@@ -64,17 +84,28 @@ export function AssistantSpeechControl({
     setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
       .then(() => generateSpeechAudio(message.content, selectedVoiceId))
       .then(({ uri }) => {
+        if (!isMountedRef.current) {
+          return;
+        }
+
         setAudioUri(uri);
         player.replace({ uri });
         player.play();
       })
       .catch(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+
         generatedRequestRef.current = null;
         setHasFailed(true);
       })
       .finally(() => {
         isGeneratingRef.current = false;
-        setIsGenerating(false);
+
+        if (isMountedRef.current) {
+          setIsGenerating(false);
+        }
       });
   }, [localAudioSource, message.content, message.id, playLocalAudio, player, selectedVoiceId]);
 
@@ -83,10 +114,7 @@ export function AssistantSpeechControl({
       generateAndPlay();
     }
 
-    return () => {
-      player.pause();
-    };
-  }, [autoGenerate, generateAndPlay, player]);
+  }, [autoGenerate, generateAndPlay]);
 
   const play = () => {
     if (localAudioSource) {

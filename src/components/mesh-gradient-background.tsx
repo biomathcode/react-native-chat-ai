@@ -20,6 +20,8 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Gradients, Palette } from '@/constants/theme';
+
 import { BUTTON_HEIGHT, BUTTON_RADIUS } from './mesh-listening-button-constants';
 
 type MeshGradientBackgroundProps = {
@@ -91,39 +93,35 @@ export function MeshGradientBackground({
         width={buttonWidth}
         height={BUTTON_HEIGHT}
         r={BUTTON_RADIUS}
-        color="#ead4ee"
+        color={Palette.meshListeningFallback}
       />
       <RoundedRect x={0} y={0} width={buttonWidth} height={BUTTON_HEIGHT} r={BUTTON_RADIUS}>
         <LinearGradient
           start={vec(0, 4)}
           end={gradientEnd}
-          colors={['#ead1ee', '#f8c3d8', '#c8d8ff', '#dacbf2']}
+          colors={[...Gradients.meshListeningBase]}
           positions={[0, 0.34, 0.68, 1]}
         />
       </RoundedRect>
       <Group opacity={0.95}>
         <Circle c={blueCenter} r={blueRadius}>
-          <RadialGradient c={blueCenter} r={58} colors={['#b8caff', '#c9d9ffcc', '#c9d9ff00']} />
+          <RadialGradient c={blueCenter} r={58} colors={[...Gradients.meshBlueRadial]} />
         </Circle>
         <Circle c={pinkCenter} r={pinkRadius}>
-          <RadialGradient c={pinkCenter} r={46} colors={['#ffaccd', '#f7b8d580', '#f7b8d500']} />
+          <RadialGradient c={pinkCenter} r={46} colors={[...Gradients.meshPinkRadial]} />
         </Circle>
         <Circle c={whiteCenter} r={38}>
-          <RadialGradient c={whiteCenter} r={42} colors={['#ffffffd9', '#ffffff60', '#ffffff00']} />
+          <RadialGradient c={whiteCenter} r={42} colors={[...Gradients.meshWhiteRadial]} />
         </Circle>
         <Circle c={lowerBlueCenter} r={lowerBlueRadius}>
-          <RadialGradient
-            c={lowerBlueCenter}
-            r={56}
-            colors={['#cfdcff', '#bfcfff66', '#bfcfff00']}
-          />
+          <RadialGradient c={lowerBlueCenter} r={56} colors={[...Gradients.meshLowerBlueRadial]} />
         </Circle>
       </Group>
       <Rect x={0} y={0} width={buttonWidth} height={BUTTON_HEIGHT} opacity={0.16}>
         <LinearGradient
           start={vec(0, 0)}
           end={highlightEnd}
-          colors={['#ffffff00', '#ffffff', '#ffffff00']}
+          colors={[...Gradients.meshHighlight]}
           positions={[0, 0.5, 1]}
         />
       </Rect>

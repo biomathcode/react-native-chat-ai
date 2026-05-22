@@ -9,13 +9,13 @@ import { FlatList } from 'react-native';
 import { Easing, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { sarvamVoiceOptions } from '@/constants/sarvam-voices';
-import { LOOPED_VOICES, START_INDEX, VISUALIZER_BARS } from '@/features/onboarding/constants';
+import { LOOPED_VOICES, START_INDEX, VISUALIZER_BARS, type VoiceOption } from '@/features/onboarding/constants';
 import { buildWaveform } from '@/features/onboarding/utils';
 import { useOnboarding } from '@/state/onboarding';
 import { clamp, useResponsiveMetrics } from '@/utils/responsive';
 
 export function useVoiceOnboardingController() {
-  const listRef = useRef<FlatList<(typeof LOOPED_VOICES)[number]>>(null);
+  const listRef = useRef<FlatList<VoiceOption>>(null);
   const { completeOnboarding } = useOnboarding();
   const metrics = useResponsiveMetrics();
   const { width, height } = metrics;
@@ -26,6 +26,7 @@ export function useVoiceOnboardingController() {
   );
   const scrollX = useSharedValue(START_INDEX * itemSpacing);
   const [selectedIndex, setSelectedIndex] = useState(START_INDEX);
+  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
   const [levels, setLevels] = useState(() => Array(VISUALIZER_BARS).fill(0.1));
   const selectedVoice = LOOPED_VOICES[selectedIndex];
   const player = useAudioPlayer(null, { updateInterval: 80 });
@@ -85,18 +86,32 @@ export function useVoiceOnboardingController() {
     },
   });
   const getItemLayout = useMemo(
-    () => (_: unknown, index: number) => ({
+    () => (_: ArrayLike<VoiceOption> | null | undefined, index: number) => ({
       length: itemSpacing,
       offset: itemSpacing * index,
       index,
     }),
     [itemSpacing]
   );
+  const finishOnboarding = async () => {
+    if (isCompletingOnboarding) {
+      return;
+    }
+
+    setIsCompletingOnboarding(true);
+    player.pause();
+
+    try {
+      await completeOnboarding(selectedVoice.id);
+    } catch {
+      setIsCompletingOnboarding(false);
+    }
+  };
 
   return {
     averageLevel,
     carouselTop,
-    completeOnboarding,
+    completeOnboarding: finishOnboarding,
     contentPadding,
     detailsTop,
     footerTop,
@@ -105,6 +120,7 @@ export function useVoiceOnboardingController() {
     horizontalPadding,
     itemSize,
     itemSpacing,
+    isCompletingOnboarding,
     levels,
     listRef,
     playerStatus,

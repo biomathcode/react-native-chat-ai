@@ -7,7 +7,7 @@ type OnboardingContextValue = {
   selectedVoiceId: SarvamVoiceId | null;
   hasCompletedOnboarding: boolean;
   isLoadingOnboardingState: boolean;
-  completeOnboarding: (voiceId: SarvamVoiceId) => void;
+  completeOnboarding: (voiceId: SarvamVoiceId) => Promise<void>;
 };
 
 const ONBOARDING_STORAGE_KEY = 'react-native-chat-ai:onboarding-complete';
@@ -37,8 +37,10 @@ async function readStoredValue(key: string) {
   }
 }
 
-function writeStoredValue(key: string, value: string) {
-  SecureStore.setItemAsync(key, value).catch(() => {});
+async function writeStoredValue(key: string, value: string) {
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch {}
 
   try {
     globalThis.localStorage?.setItem(key, value);
@@ -78,11 +80,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       selectedVoiceId,
       hasCompletedOnboarding,
       isLoadingOnboardingState,
-      completeOnboarding: (voiceId) => {
+      completeOnboarding: async (voiceId) => {
+        await Promise.all([
+          writeStoredValue(VOICE_STORAGE_KEY, voiceId),
+          writeStoredValue(ONBOARDING_STORAGE_KEY, 'true'),
+        ]);
         setSelectedVoiceId(voiceId);
         setHasCompletedOnboarding(true);
-        writeStoredValue(VOICE_STORAGE_KEY, voiceId);
-        writeStoredValue(ONBOARDING_STORAGE_KEY, 'true');
       },
     }),
     [hasCompletedOnboarding, isLoadingOnboardingState, selectedVoiceId]

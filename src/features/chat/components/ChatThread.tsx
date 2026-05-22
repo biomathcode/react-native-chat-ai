@@ -1,5 +1,5 @@
 import { type RefObject } from 'react';
-import { ScrollView, type StyleProp, type TextStyle } from 'react-native';
+import { ScrollView, type DimensionValue, type StyleProp, type TextStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { styles } from '@/features/chat/styles';
@@ -10,7 +10,7 @@ import { ChatMessageBubble } from './ChatMessageBubble';
 import { StatusBubble } from './StatusBubble';
 
 type ChatThreadProps = {
-  bubbleMaxWidth: string;
+  bubbleMaxWidth: DimensionValue;
   bubblePaddingHorizontal: number;
   bubblePaddingVertical: number;
   chatBottomPadding: number;

@@ -1,4 +1,4 @@
-import { type StyleProp, type TextStyle, View } from 'react-native';
+import { type DimensionValue, type StyleProp, type TextStyle, View } from 'react-native';
 import { sarvamVoiceOptions, type SarvamVoiceId } from '@/constants/sarvam-voices';
 
 import { ThemedText } from '@/components/themed-text';
@@ -12,7 +12,7 @@ import { MedicineCards } from './MedicineCards';
 import { AssistantSpeechControl } from './AssistantSpeechControl';
 
 type ChatMessageBubbleProps = {
-  bubbleMaxWidth: string;
+  bubbleMaxWidth: DimensionValue;
   bubblePaddingHorizontal: number;
   bubblePaddingVertical: number;
   index: number;
@@ -60,7 +60,7 @@ export function ChatMessageBubble({
     return (
       <View style={[styles.assistantMessageRow, { maxWidth: bubbleMaxWidth }]}>
         <AssistantSpeechControl
-          autoGenerate={isLatest}
+          autoGenerate={isLatest && !isInitialAssistantMessage}
           gradientColors={selectedVoice.gradient}
           localAudioSource={isInitialAssistantMessage ? selectedVoice.source : undefined}
           message={message}

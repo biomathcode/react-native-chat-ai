@@ -20,6 +20,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     position: 'relative',
+    backgroundColor: '#ffffff',
   },
   profileButton: {
     position: 'absolute',
@@ -63,12 +64,39 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#3f7354',
+
   },
   profileText: {
-    color: '#3f7354',
+    color: '#ffffff',
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '800',
+    letterSpacing: 0,
+  },
+  medicineScheduleButtonFrame: {
+    position: 'absolute',
+    right: Spacing.two,
+    zIndex: 30,
+  },
+  medicineScheduleButton: {
+    minWidth: 64,
+    minHeight: 38,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dce8e3',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medicineScheduleButtonText: {
+    color: '#426256',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '900',
+    textAlign: 'center',
     letterSpacing: 0,
   },
   transcriptCard: {
@@ -106,8 +134,8 @@ export const styles = StyleSheet.create({
   },
   chatLabel: {
     color: '#5f746e',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '700',
     letterSpacing: 0,
     marginBottom: 4,
@@ -158,8 +186,8 @@ export const styles = StyleSheet.create({
   },
   transcriptText: {
     color: '#24312e',
-    fontSize: 18,
-    lineHeight: 26,
+    fontSize: 15,
+    lineHeight: 21,
     letterSpacing: 0,
   },
   medicineCards: {
@@ -255,8 +283,8 @@ export const styles = StyleSheet.create({
   },
   sessionsTitle: {
     color: '#17231f',
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '800',
     letterSpacing: 0,
   },
@@ -266,11 +294,23 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0,
   },
+  newSessionButton: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.four,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#426256',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   sessionsList: {
     flex: 1,
   },
   sessionsListContent: {
-    paddingBottom: Spacing.six,
+    paddingBottom: 96,
     gap: Spacing.three,
   },
   sessionItem: {
@@ -280,6 +320,10 @@ export const styles = StyleSheet.create({
     borderColor: '#e2ebe7',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
+  },
+  activeSessionItem: {
+    borderColor: '#cfe5dc',
+    backgroundColor: '#eef6f4',
   },
   sessionTitle: {
     color: '#17231f',
