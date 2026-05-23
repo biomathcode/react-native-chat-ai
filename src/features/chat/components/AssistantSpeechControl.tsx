@@ -1,5 +1,14 @@
-import { Canvas, Circle, LinearGradient, vec } from '@shopify/react-native-skia';
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import {
+  Canvas,
+  Circle,
+  LinearGradient,
+  vec,
+} from '@shopify/react-native-skia';
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from 'expo-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
@@ -107,13 +116,19 @@ export function AssistantSpeechControl({
           setIsGenerating(false);
         }
       });
-  }, [localAudioSource, message.content, message.id, playLocalAudio, player, selectedVoiceId]);
+  }, [
+    localAudioSource,
+    message.content,
+    message.id,
+    playLocalAudio,
+    player,
+    selectedVoiceId,
+  ]);
 
   useEffect(() => {
     if (autoGenerate) {
       generateAndPlay();
     }
-
   }, [autoGenerate, generateAndPlay]);
 
   const play = () => {
@@ -138,7 +153,9 @@ export function AssistantSpeechControl({
 
   return (
     <Pressable
-      accessibilityLabel={status.playing ? 'Stop assistant audio' : 'Play assistant audio'}
+      accessibilityLabel={
+        status.playing ? 'Stop assistant audio' : 'Play assistant audio'
+      }
       accessibilityRole="button"
       disabled={isGenerating}
       onPress={status.playing ? stop : play}

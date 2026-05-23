@@ -52,11 +52,36 @@ export const medicineStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.three,
+    gap: Spacing.one,
+  },
+  calendarHeaderSide: {
+    width: 82,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  calendarTodayButton: {
+    minHeight: 40,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: Spacing.one,
+    backgroundColor: Palette.surface,
+    borderWidth: 1,
+    borderColor: Palette.border,
+  },
+  pressedCalendarTodayButton: {
+    opacity: 0.68,
+  },
+  calendarTodayButtonText: {
+    color: Palette.primary,
+    ...Typography.label,
+    fontWeight: '700',
   },
   calendarTitleBlock: {
     flex: 1,
-    paddingLeft: 52,
+    alignItems: 'center',
   },
   calendarTitle: {
     color: Palette.ink,

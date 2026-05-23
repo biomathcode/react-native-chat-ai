@@ -1,7 +1,14 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Vibration, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  type ScrollView as NativeScrollView,
+  Vibration,
+  View,
+} from 'react-native';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import Animated, {
   FadeInUp,
   scrollTo,
@@ -38,6 +45,14 @@ const calendarPastDays = 180;
 const calendarFutureDays = 180;
 const calendarItemWidth = 36;
 const calendarItemGap = 4;
+const AnimatedGestureScrollView = Animated.createAnimatedComponent(GestureScrollView);
+
+type ScreenArea = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
 
 function startOfDay(date: Date) {
   const nextDate = new Date(date);
@@ -235,13 +250,18 @@ function CalendarDayButton({
 }
 
 function MedicineCalendarSlider({
+  calendarScrollAreaLayoutKey,
+  onCalendarScrollAreaLayout,
   selectedDate,
   onSelectDate,
 }: {
+  calendarScrollAreaLayoutKey?: unknown;
+  onCalendarScrollAreaLayout?: (area: ScreenArea) => void;
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
 }) {
-  const scrollRef = useAnimatedRef<ScrollView>();
+  const calendarWeekFrameRef = useRef<View>(null);
+  const scrollRef = useAnimatedRef<NativeScrollView>();
   const scrollTargetX = useSharedValue(0);
   const shouldAnimateScroll = useSharedValue(false);
   const hasSyncedInitialDate = useRef(false);
@@ -260,6 +280,17 @@ function MedicineCalendarSlider({
     shouldAnimateScroll.value = animated;
     scrollTargetX.value = getScrollXForDate(startOfWeek(date));
   }, [getScrollXForDate, scrollTargetX, shouldAnimateScroll]);
+  const reportCalendarScrollAreaLayout = useCallback(() => {
+    if (!onCalendarScrollAreaLayout) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      calendarWeekFrameRef.current?.measureInWindow((x, y, width, height) => {
+        onCalendarScrollAreaLayout({ height, width, x, y });
+      });
+    });
+  }, [onCalendarScrollAreaLayout]);
 
   useDerivedValue(() => {
     scrollTo(scrollRef, scrollTargetX.value, 0, shouldAnimateScroll.value);
@@ -269,38 +300,44 @@ function MedicineCalendarSlider({
     onSelectDate(today);
     scrollToDate(today);
   };
-  const goToAdjacentWeek = (direction: -1 | 1) => {
-    const nextDate = addDays(selectedDate, direction * 7);
-
-    onSelectDate(nextDate);
-    scrollToDate(nextDate);
-  };
 
   useEffect(() => {
     scrollToDate(selectedDate, hasSyncedInitialDate.current);
     hasSyncedInitialDate.current = true;
   }, [scrollToDate, selectedDate, selectedDateKey]);
 
+  useEffect(() => {
+    reportCalendarScrollAreaLayout();
+
+    const timeout = setTimeout(reportCalendarScrollAreaLayout, 320);
+
+    return () => clearTimeout(timeout);
+  }, [calendarScrollAreaLayoutKey, reportCalendarScrollAreaLayout]);
+
   return (
     <View style={styles.calendarHeader}>
       <View style={styles.calendarHeaderTop}>
+        <View style={styles.calendarHeaderSide} />
         <View style={styles.calendarTitleBlock}>
           <ThemedText style={styles.calendarTitle}>{title}</ThemedText>
           <ThemedText style={styles.calendarDate}>{fullDateFormatter.format(selectedDate)}</ThemedText>
         </View>
-        <Pressable accessibilityLabel="Return to today" onPress={returnToToday} style={styles.calendarGlyph}>
-          <Ionicons color={Palette.primary} name="calendar-outline" size={25} />
-        </Pressable>
+        <View style={styles.calendarHeaderSide}>
+          <Pressable
+            accessibilityLabel="Return to today"
+            accessibilityRole="button"
+            onPress={returnToToday}
+            style={({ pressed }) => [styles.calendarTodayButton, pressed && styles.pressedCalendarTodayButton]}>
+            <Ionicons color={Palette.primary} name="calendar-outline" size={18} />
+            <ThemedText style={styles.calendarTodayButtonText}>Today</ThemedText>
+          </Pressable>
+        </View>
       </View>
-      <View style={styles.calendarWeekFrame}>
-        <Pressable
-          accessibilityLabel="Previous week"
-          accessibilityRole="button"
-          onPress={() => goToAdjacentWeek(-1)}
-          style={({ pressed }) => [styles.calendarWeekArrow, pressed && styles.pressedCalendarWeekArrow]}>
-          <Ionicons color={Palette.primary} name="chevron-back" size={19} />
-        </Pressable>
-        <Animated.ScrollView
+      <View
+        onLayout={reportCalendarScrollAreaLayout}
+        ref={calendarWeekFrameRef}
+        style={styles.calendarWeekFrame}>
+        <AnimatedGestureScrollView
           contentContainerStyle={styles.calendarWeekRow}
           horizontal
           ref={scrollRef}
@@ -321,25 +358,25 @@ function MedicineCalendarSlider({
               />
             );
           })}
-        </Animated.ScrollView>
-        <Pressable
-          accessibilityLabel="Next week"
-          accessibilityRole="button"
-          onPress={() => goToAdjacentWeek(1)}
-          style={({ pressed }) => [styles.calendarWeekArrow, pressed && styles.pressedCalendarWeekArrow]}>
-          <Ionicons color={Palette.primary} name="chevron-forward" size={19} />
-        </Pressable>
+        </AnimatedGestureScrollView>
       </View>
     </View>
   );
 }
 
 type MedicineSchedulesScreenProps = {
+  calendarScrollAreaLayoutKey?: unknown;
+  onCalendarScrollAreaLayout?: (area: ScreenArea) => void;
   onChatPress?: () => void;
   showChatToggle?: boolean;
 };
 
-export function MedicineSchedulesScreen({ onChatPress, showChatToggle = false }: MedicineSchedulesScreenProps) {
+export function MedicineSchedulesScreen({
+  calendarScrollAreaLayoutKey,
+  onCalendarScrollAreaLayout,
+  onChatPress,
+  showChatToggle = false,
+}: MedicineSchedulesScreenProps) {
   const { selectedDate: selectedDateParam } = useLocalSearchParams<{
     selectedDate?: string;
   }>();
@@ -384,7 +421,7 @@ export function MedicineSchedulesScreen({ onChatPress, showChatToggle = false }:
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <GestureScrollView contentContainerStyle={styles.content}>
           {showChatToggle ? (
             <View style={styles.schedulerTopBar}>
               <Pressable accessibilityLabel="Back to chat" onPress={goToChat} style={styles.schedulerChatButton}>
@@ -393,7 +430,12 @@ export function MedicineSchedulesScreen({ onChatPress, showChatToggle = false }:
               </Pressable>
             </View>
           ) : null}
-          <MedicineCalendarSlider selectedDate={selectedDate} onSelectDate={(date) => setSelectedDate(startOfDay(date))} />
+          <MedicineCalendarSlider
+            calendarScrollAreaLayoutKey={calendarScrollAreaLayoutKey}
+            onCalendarScrollAreaLayout={onCalendarScrollAreaLayout}
+            selectedDate={selectedDate}
+            onSelectDate={(date) => setSelectedDate(startOfDay(date))}
+          />
 
           {visibleDoseReminders.length === 0 ? (
             <View style={[styles.card, styles.empty, styles.reminderList]}>
@@ -424,7 +466,7 @@ export function MedicineSchedulesScreen({ onChatPress, showChatToggle = false }:
               ))}
             </View>
           )}
-        </ScrollView>
+        </GestureScrollView>
         <Pressable
           accessibilityLabel="Add medicine schedule"
           onPress={() => router.push('/medicine-schedules/add')}
