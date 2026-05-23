@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-import type { ChatMessage } from './types';
+import type { ChatMessage, ChatSession, ChatSessionSummary } from './types';
 
 export const CHAT_HISTORY_STORAGE_KEY = 'react-native-chat-ai:chat-history';
 export const MAX_STORED_MESSAGES = 16;
@@ -9,6 +9,17 @@ export const INITIAL_ASSISTANT_MESSAGE: ChatMessage = {
   role: 'assistant',
   content: 'Hello, I am here. How are you feeling today?',
 };
+
+export function createEmptyChatSession(): ChatSession {
+  const now = new Date().toISOString();
+
+  return {
+    id: `chat-session-${Date.now()}`,
+    createdAt: now,
+    updatedAt: now,
+    messages: [INITIAL_ASSISTANT_MESSAGE],
+  };
+}
 
 function readWebStoredValue(key: string) {
   try {
@@ -73,11 +84,60 @@ export function parseStoredMessages(storedMessages: string | null) {
   }
 }
 
-export function createChatSessionSummaries(messages: ChatMessage[]) {
+export function parseStoredChatSessions(storedSessions: string | null) {
+  if (!storedSessions) {
+    return [];
+  }
+
+  try {
+    const parsedSessions = JSON.parse(storedSessions);
+
+    if (!Array.isArray(parsedSessions)) {
+      return [];
+    }
+
+    const migratedMessages = parseStoredMessages(storedSessions);
+
+    if (migratedMessages.length) {
+      const now = new Date().toISOString();
+
+      return [
+        {
+          id: 'current-chat',
+          createdAt: now,
+          updatedAt: now,
+          messages: migratedMessages,
+        },
+      ];
+    }
+
+    return parsedSessions.reduce<ChatSession[]>((sessions, session) => {
+      if (
+        typeof session?.id !== 'string' ||
+        typeof session.createdAt !== 'string' ||
+        typeof session.updatedAt !== 'string'
+      ) {
+        return sessions;
+      }
+
+      const messages = parseStoredMessages(JSON.stringify(session.messages));
+
+      if (messages.length) {
+        sessions.push({ ...session, messages });
+      }
+
+      return sessions;
+    }, []);
+  } catch {
+    return [];
+  }
+}
+
+function summarizeMessages(messages: ChatMessage[]): ChatSessionSummary | null {
   const contentMessages = messages.filter((message) => message.id !== INITIAL_ASSISTANT_MESSAGE.id);
 
   if (!contentMessages.length) {
-    return [];
+    return null;
   }
 
   const firstUserMessage = contentMessages.find((message) => message.role === 'user');
@@ -85,12 +145,22 @@ export function createChatSessionSummaries(messages: ChatMessage[]) {
   const titleSource = firstUserMessage?.content ?? lastMessage.content;
   const preview = lastMessage.content;
 
-  return [
-    {
-      id: 'current-chat',
-      title: titleSource.length > 34 ? `${titleSource.slice(0, 34)}...` : titleSource,
-      preview: preview.length > 74 ? `${preview.slice(0, 74)}...` : preview,
-      messageCount: contentMessages.length,
-    },
-  ];
+  return {
+    id: '',
+    title: titleSource.length > 34 ? `${titleSource.slice(0, 34)}...` : titleSource,
+    preview: preview.length > 74 ? `${preview.slice(0, 74)}...` : preview,
+    messageCount: contentMessages.length,
+  };
+}
+
+export function createChatSessionSummaries(sessions: ChatSession[]) {
+  return sessions.reduce<ChatSessionSummary[]>((summaries, session) => {
+    const summary = summarizeMessages(session.messages);
+
+    if (summary) {
+      summaries.push({ ...summary, id: session.id });
+    }
+
+    return summaries;
+  }, []);
 }

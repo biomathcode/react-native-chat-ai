@@ -1,5 +1,5 @@
 import { Canvas, Circle, LinearGradient, vec } from '@shopify/react-native-skia';
-import { type StyleProp, type TextStyle, View } from 'react-native';
+import { type DimensionValue, type StyleProp, type TextStyle, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { sarvamVoiceOptions, type SarvamVoiceId } from '@/constants/sarvam-voices';
@@ -8,7 +8,7 @@ import { styles } from '@/features/chat/styles';
 import { AnimatedChatBubble } from './AnimatedChatBubble';
 
 type StatusBubbleProps = {
-  bubbleMaxWidth: string;
+  bubbleMaxWidth: DimensionValue;
   bubblePaddingHorizontal: number;
   bubblePaddingVertical: number;
   role: 'user' | 'assistant';

@@ -9,6 +9,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     alignItems: 'center',
+    backgroundColor: '#f6f5f4',
   },
   header: {
     position: 'absolute',
@@ -119,6 +120,8 @@ export const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: 32,
     borderRadius: 26,
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#111111',

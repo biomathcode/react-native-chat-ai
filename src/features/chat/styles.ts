@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { BottomTabInset, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -20,6 +20,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     position: 'relative',
+    backgroundColor: '#ffffff',
   },
   profileButton: {
     position: 'absolute',
@@ -29,7 +30,6 @@ export const styles = StyleSheet.create({
   },
   sessionsButtonFrame: {
     position: 'absolute',
-    left: Spacing.two,
     zIndex: 40,
   },
   sessionsButton: {
@@ -63,12 +63,38 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#3f7354',
   },
   profileText: {
-    color: '#3f7354',
+    color: '#ffffff',
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '800',
+    letterSpacing: 0,
+  },
+  medicineScheduleButtonFrame: {
+    position: 'absolute',
+    right: Spacing.two,
+    zIndex: 30,
+  },
+  medicineScheduleButton: {
+    minWidth: 64,
+    minHeight: 38,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dce8e3',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medicineScheduleButtonText: {
+    color: '#426256',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '900',
+    textAlign: 'center',
     letterSpacing: 0,
   },
   transcriptCard: {
@@ -106,8 +132,8 @@ export const styles = StyleSheet.create({
   },
   chatLabel: {
     color: '#5f746e',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '700',
     letterSpacing: 0,
     marginBottom: 4,
@@ -158,8 +184,8 @@ export const styles = StyleSheet.create({
   },
   transcriptText: {
     color: '#24312e',
-    fontSize: 18,
-    lineHeight: 26,
+    fontSize: 15,
+    lineHeight: 21,
     letterSpacing: 0,
   },
   medicineCards: {
@@ -219,26 +245,111 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  listenArea: {
+  voiceModeArea: {
     position: 'absolute',
-    bottom: BottomTabInset + Spacing.one,
     left: 0,
     right: 0,
-    height: 96,
+    height: 144,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'flex-start',
     zIndex: 30,
     elevation: 30,
   },
+  voiceModeStack: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceModeCloseButton: {
+    marginTop: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#dce8e3',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
   listeningText: {
-    position: 'absolute',
-    top: 76,
+    marginTop: 2,
     color: '#5f746e',
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '700',
     letterSpacing: 0,
+  },
+  chatComposerRow: {
+    position: 'absolute',
+    minHeight: 52,
+    zIndex: 32,
+  },
+  chatComposerOrbSlot: {
+    position: 'absolute',
+    left: 0,
+    top: 4,
+  },
+  chatComposer: {
+    position: 'absolute',
+    top: 0,
+    minHeight: 52,
+    maxHeight: 118,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: '#dce8e399',
+    backgroundColor: '#fffffff0',
+    paddingLeft: Spacing.three,
+    paddingRight: Spacing.three,
+    paddingVertical: 4,
+    overflow: 'hidden',
+  },
+  chatComposerBlur: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 26,
+  },
+  chatComposerInput: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 104,
+    paddingTop: 12,
+    paddingBottom: 10,
+    paddingRight: 0,
+    color: '#24312e',
+    fontSize: 15,
+    lineHeight: 20,
+    letterSpacing: 0,
+    textAlignVertical: 'top',
+  },
+  chatComposerButton: {
+    position: 'absolute',
+    top: 4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#426256',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatComposerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#dce8e399',
+    backgroundColor: '#fffffff0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  chatComposerControlBlur: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 22,
+  },
+  chatComposerOrbClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 22,
+    overflow: 'hidden',
   },
   sessionsScreen: {
     flex: 1,
@@ -255,8 +366,8 @@ export const styles = StyleSheet.create({
   },
   sessionsTitle: {
     color: '#17231f',
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '800',
     letterSpacing: 0,
   },
@@ -266,11 +377,23 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0,
   },
+  newSessionButton: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.four,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#426256',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   sessionsList: {
     flex: 1,
   },
   sessionsListContent: {
-    paddingBottom: Spacing.six,
+    paddingBottom: 96,
     gap: Spacing.three,
   },
   sessionItem: {
@@ -280,6 +403,10 @@ export const styles = StyleSheet.create({
     borderColor: '#e2ebe7',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
+  },
+  activeSessionItem: {
+    borderColor: '#cfe5dc',
+    backgroundColor: '#eef6f4',
   },
   sessionTitle: {
     color: '#17231f',

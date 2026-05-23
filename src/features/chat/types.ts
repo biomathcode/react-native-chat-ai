@@ -21,6 +21,13 @@ export type ChatResponse = {
   error?: string;
 };
 
+export type ChatSession = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+};
+
 export type ChatSessionSummary = {
   id: string;
   title: string;

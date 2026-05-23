@@ -6,18 +6,18 @@ import {
   useAudioRecorderState,
   type RecordingOptions,
 } from 'expo-audio';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, ScrollView, type DimensionValue } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
-import { BottomTabInset } from '@/constants/theme';
+import { BottomTabInset, Spacing } from '@/constants/theme';
 import { sarvamVoiceOptions } from '@/constants/sarvam-voices';
 import { getErrorMessage, normalizeMetering } from '@/features/chat/audio';
 import { sendChatRequest, transcribeAudio } from '@/features/chat/api';
@@ -25,26 +25,50 @@ import {
   CHAT_HISTORY_STORAGE_KEY,
   INITIAL_ASSISTANT_MESSAGE,
   MAX_STORED_MESSAGES,
+  createEmptyChatSession,
   createChatSessionSummaries,
-  parseStoredMessages,
+  parseStoredChatSessions,
   readStoredValue,
   writeStoredValue,
 } from '@/features/chat/chat-history';
-import { createMedicineListMessage, isMedicineListRequest } from '@/features/chat/medicine-tool';
+import {
+  createMedicineListMessage,
+  isMedicineListRequest,
+} from '@/features/chat/medicine-tool';
 import type { ChatMessage } from '@/features/chat/types';
 import { useOnboarding } from '@/state/onboarding';
 import { useResponsiveMetrics } from '@/utils/responsive';
 
-export function useChatController() {
+type UseChatControllerOptions = {
+  initialMedicineSchedulesOpen?: boolean;
+};
+
+export function useChatController({
+  initialMedicineSchedulesOpen = false,
+}: UseChatControllerOptions = {}) {
   const metrics = useResponsiveMetrics();
   const { selectedVoiceId } = useOnboarding();
   const selectedVoice =
-    sarvamVoiceOptions.find((voice) => voice.id === selectedVoiceId) ?? sarvamVoiceOptions[0];
+    sarvamVoiceOptions.find((voice) => voice.id === selectedVoiceId) ??
+    sarvamVoiceOptions[0];
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [textInputValue, setTextInputValue] = useState('');
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isMedicineSchedulesOpen, setIsMedicineSchedulesOpen] = useState(
+    initialMedicineSchedulesOpen
+  );
+  const [chatSessions, setChatSessions] = useState(() => [
+    createEmptyChatSession(),
+  ]);
+  const [activeSessionId, setActiveSessionId] = useState(chatSessions[0].id);
+  const fallbackMessages = useMemo(() => [INITIAL_ASSISTANT_MESSAGE], []);
+  const activeSession =
+    chatSessions.find((session) => session.id === activeSessionId) ??
+    chatSessions[0];
+  const messages = activeSession?.messages ?? fallbackMessages;
   const messagesRef = useRef<ChatMessage[]>([]);
   const chatScrollRef = useRef<ScrollView>(null);
   const hasLoadedStoredMessages = useRef(false);
@@ -56,18 +80,119 @@ export function useChatController() {
   const recorderState = useAudioRecorderState(audioRecorder, 80);
   const listeningProgress = useSharedValue(0);
   const sessionsProgress = useSharedValue(0);
-  const gestureStartProgress = useSharedValue(0);
+  const medicineSchedulesProgress = useSharedValue(
+    initialMedicineSchedulesOpen ? 1 : 0
+  );
+  const gestureStartOffset = useSharedValue(0);
+  const drawerGestureExclusionLeft = useSharedValue(-1);
+  const drawerGestureExclusionRight = useSharedValue(-1);
+  const drawerGestureExclusionTop = useSharedValue(-1);
+  const drawerGestureExclusionBottom = useSharedValue(-1);
   const horizontalPadding = metrics.horizontal(24, 16, 32);
   const profileTopOffset = Math.min(34, Math.max(12, metrics.height * 0.024));
   const chatTopPadding = profileTopOffset + metrics.vertical(92, 78, 104);
-  const chatBottomPadding = BottomTabInset + metrics.vertical(124, 108, 148);
-  const transcriptFontSize = metrics.moderate(18, 0.35, 16, 20);
+  const chatBottomPadding = BottomTabInset + metrics.vertical(156, 140, 180);
+  const listenBottomOffset = BottomTabInset - 6;
+  const composerKeyboardGap = 24;
+  const composerBottomOffset = BottomTabInset + metrics.vertical(14, 10, 18);
+  const transcriptFontSize = metrics.moderate(15, 0.3, 14, 17);
+  const bubbleMaxWidth: DimensionValue = metrics.isWide ? '68%' : '88%';
+  const composerRowWidth =
+    (metrics.width - horizontalPadding * 2) * (metrics.isWide ? 0.68 : 0.88);
+  const composerControlSize = 44;
+  const assistantBubbleOffset = 36 + Spacing.two;
+  const composerInputWidth = Math.max(
+    180,
+    composerRowWidth - assistantBubbleOffset
+  );
+  const composerRowLeft =
+    horizontalPadding +
+    assistantBubbleOffset -
+    composerControlSize -
+    Spacing.two;
+  const composerControlsRowWidth =
+    composerInputWidth + composerControlSize * 2 + Spacing.two * 2;
+  const composerInputLeft = composerControlSize + Spacing.two;
+  const composerSubmitLeft = composerControlsRowWidth - composerControlSize;
+  const composerFocusedInputWidth = composerSubmitLeft - Spacing.two;
   const animateSessions = (open: boolean) => {
     setIsSessionsOpen(open);
+    setIsMedicineSchedulesOpen(false);
     sessionsProgress.value = withTiming(open ? 1 : 0, {
       duration: 280,
       easing: Easing.bezier(0.77, 0, 0.175, 1),
     });
+    medicineSchedulesProgress.value = withTiming(0, {
+      duration: 280,
+      easing: Easing.bezier(0.77, 0, 0.175, 1),
+    });
+  };
+  const animateMedicineSchedules = (open: boolean) => {
+    setIsMedicineSchedulesOpen(open);
+    setIsSessionsOpen(false);
+    medicineSchedulesProgress.value = withTiming(open ? 1 : 0, {
+      duration: 280,
+      easing: Easing.bezier(0.77, 0, 0.175, 1),
+    });
+    sessionsProgress.value = withTiming(0, {
+      duration: 280,
+      easing: Easing.bezier(0.77, 0, 0.175, 1),
+    });
+  };
+  const setMedicineSchedulesImmediately = (open: boolean) => {
+    setIsMedicineSchedulesOpen(open);
+    setIsSessionsOpen(false);
+    medicineSchedulesProgress.value = open ? 1 : 0;
+    sessionsProgress.value = 0;
+  };
+  const setDrawerGestureExclusionArea = useCallback(
+    (area: { height: number; width: number; x: number; y: number }) => {
+      drawerGestureExclusionLeft.value = area.x;
+      drawerGestureExclusionRight.value = area.x + area.width;
+      drawerGestureExclusionTop.value = area.y;
+      drawerGestureExclusionBottom.value = area.y + area.height;
+    },
+    [
+      drawerGestureExclusionBottom,
+      drawerGestureExclusionLeft,
+      drawerGestureExclusionRight,
+      drawerGestureExclusionTop,
+    ]
+  );
+  const setMessages = (
+    nextMessages:
+      | ChatMessage[]
+      | ((currentMessages: ChatMessage[]) => ChatMessage[])
+  ) => {
+    setChatSessions((currentSessions) =>
+      currentSessions.map((session) => {
+        if (session.id !== activeSessionId) {
+          return session;
+        }
+
+        const resolvedMessages =
+          typeof nextMessages === 'function'
+            ? nextMessages(session.messages)
+            : nextMessages;
+
+        return {
+          ...session,
+          messages: resolvedMessages.slice(-MAX_STORED_MESSAGES),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  };
+  const createNewSession = () => {
+    const newSession = createEmptyChatSession();
+
+    setChatSessions((currentSessions) => [newSession, ...currentSessions]);
+    setActiveSessionId(newSession.id);
+    animateSessions(false);
+  };
+  const selectSession = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    animateSessions(false);
   };
 
   useEffect(() => {
@@ -76,10 +201,15 @@ export function useChatController() {
     if (hasLoadedStoredMessages.current) {
       writeStoredValue(
         CHAT_HISTORY_STORAGE_KEY,
-        JSON.stringify(messages.slice(-MAX_STORED_MESSAGES))
+        JSON.stringify(
+          chatSessions.map((session) => ({
+            ...session,
+            messages: session.messages.slice(-MAX_STORED_MESSAGES),
+          }))
+        )
       );
     }
-  }, [messages]);
+  }, [chatSessions, messages]);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,12 +217,13 @@ export function useChatController() {
     readStoredValue(CHAT_HISTORY_STORAGE_KEY).then((storedMessages) => {
       if (!isMounted) return;
 
-      const restoredMessages = parseStoredMessages(storedMessages);
-      setMessages(
-        restoredMessages.length
-          ? restoredMessages.slice(-MAX_STORED_MESSAGES)
-          : [INITIAL_ASSISTANT_MESSAGE]
-      );
+      const restoredSessions = parseStoredChatSessions(storedMessages);
+      const nextSessions = restoredSessions.length
+        ? restoredSessions
+        : [createEmptyChatSession()];
+
+      setChatSessions(nextSessions);
+      setActiveSessionId(nextSessions[0].id);
       hasLoadedStoredMessages.current = true;
     });
 
@@ -119,26 +250,91 @@ export function useChatController() {
   const drawerGesture = useMemo(
     () =>
       Gesture.Pan()
+        .onTouchesDown((event, stateManager) => {
+          const touch = event.allTouches[0];
+
+          if (!touch) {
+            return;
+          }
+
+          const isInsideExcludedArea =
+            touch.absoluteX >= drawerGestureExclusionLeft.value &&
+            touch.absoluteX <= drawerGestureExclusionRight.value &&
+            touch.absoluteY >= drawerGestureExclusionTop.value &&
+            touch.absoluteY <= drawerGestureExclusionBottom.value;
+
+          if (isInsideExcludedArea) {
+            stateManager.fail();
+          }
+        })
         .activeOffsetX([-14, 14])
         .failOffsetY([-18, 18])
         .onBegin(() => {
-          gestureStartProgress.value = sessionsProgress.value;
+          gestureStartOffset.value =
+            sessionsProgress.value - medicineSchedulesProgress.value;
         })
         .onUpdate((event) => {
-          const nextProgress = gestureStartProgress.value + event.translationX / metrics.width;
-          sessionsProgress.value = Math.min(1, Math.max(0, nextProgress));
+          let minOffset = -1;
+          let maxOffset = 1;
+
+          if (gestureStartOffset.value < -0.5) {
+            maxOffset = 0;
+          } else if (gestureStartOffset.value > 0.5) {
+            minOffset = 0;
+          }
+
+          const nextOffset = Math.min(
+            maxOffset,
+            Math.max(
+              minOffset,
+              gestureStartOffset.value + event.translationX / metrics.width
+            )
+          );
+
+          sessionsProgress.value = Math.max(0, nextOffset);
+          medicineSchedulesProgress.value = Math.max(0, -nextOffset);
         })
         .onEnd((event) => {
-          const targetProgress =
-            event.velocityX > 520 ? 1 : event.velocityX < -520 ? 0 : sessionsProgress.value >= 0.5 ? 1 : 0;
+          const currentOffset =
+            sessionsProgress.value - medicineSchedulesProgress.value;
+          let targetOffset = 0;
 
-          sessionsProgress.value = withTiming(targetProgress, {
+          if (gestureStartOffset.value < -0.5) {
+            targetOffset =
+              event.velocityX > 520 || currentOffset > -0.65 ? 0 : -1;
+          } else if (gestureStartOffset.value > 0.5) {
+            targetOffset =
+              event.velocityX < -520 || currentOffset < 0.65 ? 0 : 1;
+          } else if (event.velocityX > 520 || currentOffset > 0.35) {
+            targetOffset = 1;
+          } else if (event.velocityX < -520 || currentOffset < -0.35) {
+            targetOffset = -1;
+          }
+
+          sessionsProgress.value = withTiming(Math.max(0, targetOffset), {
             duration: 220,
             easing: Easing.out(Easing.cubic),
           });
-          runOnJS(setIsSessionsOpen)(targetProgress === 1);
+          medicineSchedulesProgress.value = withTiming(
+            Math.max(0, -targetOffset),
+            {
+              duration: 220,
+              easing: Easing.out(Easing.cubic),
+            }
+          );
+          scheduleOnRN(setIsSessionsOpen, targetOffset === 1);
+          scheduleOnRN(setIsMedicineSchedulesOpen, targetOffset === -1);
         }),
-    [gestureStartProgress, metrics.width, sessionsProgress]
+    [
+      gestureStartOffset,
+      drawerGestureExclusionBottom,
+      drawerGestureExclusionLeft,
+      drawerGestureExclusionRight,
+      drawerGestureExclusionTop,
+      medicineSchedulesProgress,
+      metrics.width,
+      sessionsProgress,
+    ]
   );
 
   const listeningTextStyle = useAnimatedStyle(() => ({
@@ -147,36 +343,99 @@ export function useChatController() {
   }));
 
   const transcriptCardStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(messages.length || isTranscribing || isThinking ? 1 : 0, {
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-    }),
+    opacity: withTiming(
+      messages.length || isTranscribing || isThinking ? 1 : 0,
+      {
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+      }
+    ),
     transform: [
       {
-        translateY: withTiming(messages.length || isTranscribing || isThinking ? 0 : 18, {
-          duration: 240,
-          easing: Easing.out(Easing.cubic),
-        }),
+        translateY: withTiming(
+          messages.length || isTranscribing || isThinking ? 0 : 18,
+          {
+            duration: 240,
+            easing: Easing.out(Easing.cubic),
+          }
+        ),
       },
     ],
   }));
 
   const drawerTrackStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -metrics.width * (1 - sessionsProgress.value) }],
+    transform: [
+      {
+        translateX:
+          -metrics.width +
+          metrics.width * sessionsProgress.value -
+          metrics.width * medicineSchedulesProgress.value,
+      },
+    ],
   }));
 
   const askSarvam = async (nextMessages: ChatMessage[]) => {
     setIsThinking(true);
-    const assistantText = await sendChatRequest(nextMessages, selectedVoice.name);
 
-    if (assistantText) {
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        { id: `${Date.now()}-assistant`, role: 'assistant', content: assistantText },
-      ]);
+    try {
+      const assistantText = await sendChatRequest(
+        nextMessages,
+        selectedVoice.name
+      );
+
+      if (assistantText) {
+        setMessages((currentMessages) => [
+          ...currentMessages,
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            content: assistantText,
+          },
+        ]);
+      }
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const submitUserText = async (content: string) => {
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent) {
+      return;
     }
 
-    setIsThinking(false);
+    const userMessage: ChatMessage = {
+      id: `${Date.now()}-user`,
+      role: 'user',
+      content: trimmedContent,
+    };
+    const nextMessages = [...messagesRef.current, userMessage];
+
+    setMessages(nextMessages);
+
+    if (isMedicineListRequest(trimmedContent)) {
+      setMessages([...nextMessages, createMedicineListMessage()]);
+      return;
+    }
+
+    await askSarvam(nextMessages);
+  };
+
+  const sendTextInput = async () => {
+    const nextText = textInputValue;
+
+    if (!nextText.trim() || isThinking || isTranscribing || isListening) {
+      return;
+    }
+
+    setTextInputValue('');
+
+    try {
+      await submitUserText(nextText);
+    } catch (error) {
+      Alert.alert('Chat unavailable', getErrorMessage(error));
+    }
   };
 
   const transcribeRecording = async (audioUri: string) => {
@@ -186,28 +445,17 @@ export function useChatController() {
 
     if (!transcribedText) return;
 
-    const userMessage: ChatMessage = {
-      id: `${Date.now()}-user`,
-      role: 'user',
-      content: transcribedText,
-    };
-    const nextMessages = [...messagesRef.current, userMessage];
-
-    setMessages(nextMessages);
-
-    if (isMedicineListRequest(transcribedText)) {
-      setMessages([...nextMessages, createMedicineListMessage()]);
-      return;
-    }
-
-    await askSarvam(nextMessages);
+    await submitUserText(transcribedText);
   };
 
   const startListening = async () => {
     const permission = await AudioModule.requestRecordingPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Microphone permission needed', 'Please allow microphone access to start listening.');
+      Alert.alert(
+        'Microphone permission needed',
+        'Please allow microphone access to start listening.'
+      );
       return;
     }
 
@@ -231,7 +479,9 @@ export function useChatController() {
     setIsListening(false);
 
     if (!audioUri) {
-      throw new Error('Recording stopped, but Expo did not return an audio file URI.');
+      throw new Error(
+        'Recording stopped, but Expo did not return an audio file URI.'
+      );
     }
 
     await transcribeRecording(audioUri);
@@ -253,37 +503,82 @@ export function useChatController() {
     }
   };
 
+  const enableTextMode = () => {
+    setIsVoiceMode(false);
+
+    if (isListening) {
+      void toggleListening();
+    }
+  };
+
+  const enableVoiceMode = () => {
+    setIsVoiceMode(true);
+
+    if (!isListening) {
+      void toggleListening();
+    }
+  };
+
   return {
     audioLevel: normalizeMetering(recorderState.metering),
-    bubbleMaxWidth: metrics.isWide ? '68%' : '88%',
+    bubbleMaxWidth,
     bubblePaddingHorizontal: metrics.horizontal(14, 12, 18),
     bubblePaddingVertical: metrics.vertical(12, 10, 14),
     chatBottomPadding,
     chatScrollRef,
     chatTopPadding,
+    composerControlsRowWidth,
+    composerFocusedInputWidth,
+    composerInputLeft,
+    composerInputWidth,
+    composerRowLeft,
+    composerRowWidth,
+    composerSubmitLeft,
+    composerBottomOffset,
+    composerKeyboardGap,
+    activeSessionId,
     closeSessions: () => animateSessions(false),
+    closeMedicineSchedules: () => animateMedicineSchedules(false),
     drawerGesture,
     drawerTrackStyle,
     horizontalPadding,
     isListening,
+    isMedicineSchedulesOpen,
     isSessionsOpen,
     isThinking,
     isTranscribing,
+    isVoiceMode,
+    listenBottomOffset,
     listeningButtonWidth: metrics.width - horizontalPadding * 2,
     listeningTextStyle,
     messages,
+    medicineSchedulesProgress,
     minHeight: metrics.height,
     openSessions: () => animateSessions(true),
+    openMedicineSchedules: () => animateMedicineSchedules(true),
+    openMedicineSchedulesImmediately: () =>
+      setMedicineSchedulesImmediately(true),
     profileTopOffset,
-    sessions: createChatSessionSummaries(messages),
+    createNewSession,
+    selectSession,
+    sessions: createChatSessionSummaries(chatSessions),
     sessionsProgress,
     selectedVoiceId,
+    enableTextMode,
+    enableVoiceMode,
+    sendTextInput,
+    setDrawerGestureExclusionArea,
+    setTextInputValue,
+    textInputValue,
+    textInputDisabled: isThinking || isTranscribing || isListening,
     toggleListening,
+    toggleMedicineSchedules: () =>
+      animateMedicineSchedules(!isMedicineSchedulesOpen),
     toggleSessions: () => animateSessions(!isSessionsOpen),
     transcriptCardStyle,
     transcriptTextStyle: {
       fontSize: transcriptFontSize,
-      lineHeight: Math.round(transcriptFontSize * 1.45),
+      lineHeight: Math.round(transcriptFontSize * 1.4),
     },
     width: metrics.width,
   };
