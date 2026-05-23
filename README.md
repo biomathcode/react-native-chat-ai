@@ -20,8 +20,29 @@ Voice-first Expo and React Native companion for chat, medicine recall, and daily
   <img alt="Status" src="https://img.shields.io/badge/status-active-426256" />
 </p>
 
+### Watch -> 
+
+<p align="center">
+  <video src="./assets/showcase/framedrop_video.mp4" width="320" controls muted playsinline>
+    A video walkthrough of Sage.
+  </video>
+</p>
+
+
+
 ### Problem Statement
 In India as well as the world, Chronic diseases are on the rise. Medication at the right time is crucial for managing these conditions effectively. More often It a care taker responsibility to remind the patients to take their medicines on time. This can be a challenging task, especially when there are multiple medications with different schedules. Additionally, patients may have questions about their medications, such as potential side effects or interactions with other drugs. A voice assistant can provide timely reminders and answer medication-related queries, improving adherence and patient outcomes.
+
+
+## Showcase
+
+<p align="center">
+  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19%20(2).jpeg" alt="Sage medicine schedule screen" width="260" />
+  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19%20(1).jpeg" alt="Sage previous conversations screen" width="260" />
+  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19.jpeg" alt="Sage chat screen with medicine cards" width="260" />
+
+</p>
+
 
 
 ## Overview
@@ -47,22 +68,6 @@ In My research, I found that ChatGPT still can't send timely reminders to the us
 
 I have not still implemented the user notification/ reminders. I have mostly focus on the UI and the experience of the user interface. We have latency issue as well. Sarvam Agents do have great voices, transcription and response generation but the latency is bit high. I am looking forward to optimize the latency in the future using Live-kit. Even profile more tools, like medicine search api and medicine information api.
 
-
-
-## Showcase
-
-<p align="center">
-  <video src="./assets/showcase/framedrop_video.mp4" width="320" controls muted playsinline>
-    A video walkthrough of Sage.
-  </video>
-</p>
-
-<p align="center">
-  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19%20(2).jpeg" alt="Sage medicine schedule screen" width="260" />
-  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19%20(1).jpeg" alt="Sage previous conversations screen" width="260" />
-  <img src="./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19.jpeg" alt="Sage chat screen with medicine cards" width="260" />
-
-</p>
 
 ## Deployment
 
