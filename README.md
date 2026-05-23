@@ -20,12 +20,12 @@ Voice-first Expo and React Native companion for chat, medicine recall, and daily
   <img alt="Status" src="https://img.shields.io/badge/status-active-426256" />
 </p>
 
-### Watch -> 
+### Watch
 
 <p align="center">
-  <video src="./assets/showcase/framedrop_video.mp4" width="320" controls muted playsinline>
-    A video walkthrough of Sage.
-  </video>
+
+[![Watch the demo](./assets/showcase/WhatsApp%20Image%202026-05-23%20at%2016.12.19%20(2).jpeg)](https://youtube.com/shorts/bb16Wsc3JaM)
+ 
 </p>
 
 
