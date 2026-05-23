@@ -2,7 +2,7 @@
   "name": "react-native-chat-ai",
   "main": "expo-router/entry",
   "version": "1.0.0",
-  "packageManager": "pnpm",
+  "packageManager": "pnpm@10.12.1",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -10,6 +10,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "vercel-build": "expo export -p web",
     "voices:generate": "node scripts/generate-sarvam-voices.mjs"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "expo-linking": "~55.0.15",
     "expo-router": "~55.0.15",
     "expo-secure-store": "~55.0.14",
+    "expo-server": "~55.0.10",
     "expo-splash-screen": "~55.0.21",
     "expo-status-bar": "~55.0.6",
     "expo-symbols": "~55.0.9",
@@ -56,5 +58,10 @@
     "eslint-config-expo": "~55.0.1",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@shopify/react-native-skia"
+    ]
+  }
 }

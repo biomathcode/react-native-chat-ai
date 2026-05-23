@@ -20,8 +20,15 @@ function getApiUrl(path: string) {
 
   const constants = Constants as typeof Constants & {
     expoGoConfig?: { debuggerHost?: string };
+    expoConfig?: typeof Constants.expoConfig & { extra?: { apiBaseUrl?: string } };
     manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
   };
+  const configuredBaseUrl = constants.expoConfig?.extra?.apiBaseUrl;
+
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl.replace(/\/$/, '')}${path}`;
+  }
+
   const hostUri =
     constants.expoConfig?.hostUri ??
     constants.expoGoConfig?.debuggerHost ??

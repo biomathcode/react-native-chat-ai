@@ -9,12 +9,10 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#ffffff",
     "ios": {
-      "scheme": "reactnativechatai",
       "icon": "./assets/expo.icon",
       "backgroundColor": "#ffffff"
     },
     "android": {
-      "scheme": "reactnativechatai",
       "adaptiveIcon": {
         "backgroundColor": "#2f6b55",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -36,7 +34,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://react-native-chat-ai.vercel.app"
+        }
+      ],
       [
         "expo-dev-client",
         {
@@ -62,6 +65,7 @@
       "reactCompiler": true
     },
     "extra": {
+      "apiBaseUrl": "https://react-native-chat-ai.vercel.app",
       "router": {},
       "eas": {
         "projectId": "cd172bfd-7572-4f09-9831-d266029c2175"
